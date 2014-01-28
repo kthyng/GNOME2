@@ -18,6 +18,7 @@ from gnome.movers import Mover
 from gnome.utilities.projections import FlatEarthProjection as proj
 from gnome.utilities import serializable
 from tracpy.tracpy_class import Tracpy
+import tracpy
 
 
 class TracpyMover(Mover):
@@ -64,6 +65,17 @@ class TracpyMover(Mover):
     def __repr__(self):
         return 'TracpyMover(<%s>)' % self.id
 
+    def prepare_for_model_run(self, date, lon0, lat0):
+
+        tinds, nc, t0save, xend, yend, zend, zp, ttend, t, flag = self.tp.prepare_for_model_run(date, lon0, lat0)
+
+        return tinds, nc, t0save, xend, yend, zend, zp, ttend, t, flag
+
+    def prepare_for_model_step2(self, tind, nc, flag, xend, yend, zend, j):
+
+        xstart, ystart, zstart = self.tp.prepare_for_model_step(tind, nc, flag, xend, yend, zend, j)
+        # xstart, ystart, zstart = self.tp.prepare_for_model_step(tinds[j+1], nc, flag, xend, yend, zend, j)
+
     def get_move(
         self,
         spill,
@@ -86,7 +98,6 @@ class TracpyMover(Mover):
         """
 
         # Get the data:
-
         try:
             positions = spill['positions'] # Nx3 with lon,lat,z
             status_codes = spill['status_codes']
@@ -99,17 +110,43 @@ class TracpyMover(Mover):
         in_water_mask = status_codes == basic_types.oil_status.in_water
 
         # compute the move
-        # (need to subtract in tracpy to get differential position)
 
         delta = np.zeros_like(positions)
 
         if self.active and self.on:
 
-            # CALL TRACPY HERE
+            # Old:
             # delta[in_water_mask] = tracpy. #self.velocity * time_step
 
-            # NEED TO HAVE ALREADY CONVERTED TO LAT LON HERE FOR DELTA LON/LAT
+            # Convert from lon/lat to grid coords
+            # Interpolate to get starting positions in grid space
+            xstart, ystart, _ = tracpy.tools.interpolate2d(positions[:,0], positions[:,1], self.tp.grid, 'd_ll2ij')
+
+            # Call TRACMASS
+            # Since I know I am doing 2d for now, can I essentially ignore the z positions?
+            # FLAG PROBABLY NEEDS TO BE UPDATED FOR STATUS CODES FOR EXITING DRIFTERS?
+            xend,\
+                yend,\
+                zend,\
+                flag,\
+                ttend, U, V = self.tp.step(xstart, ystart, positions[:,2])
+            # xend_temp,\
+            #     yend_temp,\
+            #     zend_temp,\
+            #     flag[ind],\
+            #     ttend_temp, U, V = self.tp.step(j, ttend[ind,j*self.tp.N], xstart, ystart, zstart)
+
+            # Convert back to lon/lat from grid indices and calculate change in lon/lat
+            lon, lat, _ = tracpy.tools.interpolate2d(xend, yend, self.tp.grid, 'm_ij2ll')
+            delta[in_water_mask] = np.hstack((lon-positions[:,0], lat-positions[:,1], positions[:,2]))
+
 
         return delta
 
+    def model_step_is_done(self):
 
+        xend[ind,j*tp.N+1:j*tp.N+tp.N+1], \
+            yend[ind,j*tp.N+1:j*tp.N+tp.N+1], \
+            zend[ind,j*tp.N+1:j*tp.N+tp.N+1], \
+            zp[ind,j*tp.N+1:j*tp.N+tp.N+1], \
+            ttend[ind,j*tp.N+1:j*tp.N+tp.N+1] = tp.model_step_is_done(xend_temp, yend_temp, zend_temp, ttend_temp, ttend[ind,j*tp.N])
