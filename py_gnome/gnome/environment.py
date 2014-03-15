@@ -36,6 +36,7 @@ class Environment(object):
 
     This base class just defines the id property
     """
+    _state = copy.deepcopy(serializable.Serializable._state)
 
     def __init__(self, **kwargs):
         """
@@ -64,7 +65,6 @@ class Wind(Environment, serializable.Serializable):
     # - read only properties
 
     _update = [  # default units for input/output data
-        'name',
         'latitude',
         'longitude',
         'description',
@@ -77,13 +77,16 @@ class Wind(Environment, serializable.Serializable):
     _create = []  # used to create new obj or as readonly parameter
     _create.extend(_update)
 
-    state = copy.deepcopy(serializable.Serializable.state)
-    state.add(create=_create, update=_update)
+    _state = copy.deepcopy(Environment._state)
+    _state.add(create=_create, update=_update)
 
     # add 'filename' as a Field object
-
-    state.add_field(serializable.Field('filename', isdatafile=True,
-                    create=True, read=True))
+    #'name',    is this for webgnome?
+    _state.add_field([serializable.Field('filename', isdatafile=True,
+                      create=True, read=True, test_for_eq=False),
+                      serializable.Field('name', isdatafile=True,
+                      create=True, update=True, test_for_eq=False),
+                      ])
 
     # list of valid velocity units for timeseries
 
@@ -200,6 +203,7 @@ class Wind(Environment, serializable.Serializable):
                                    file_contains=ts_format)
             self._user_units = self.ossm.user_units
 
+            # todo: not sure what this is for? .. for webgnome?
             self.name = kwargs.pop('name',
                                    os.path.split(self.ossm.filename)[1])
             self.source_type = 'file'  # this must be file
@@ -211,7 +215,8 @@ class Wind(Environment, serializable.Serializable):
         # not sure if this should be datetime or string
 
         self.updated_at = kwargs.pop('updated_at',
-                (time_utils.sec_to_date(os.path.getmtime(self.ossm.filename)) if self.ossm.filename else datetime.datetime.now()))
+                (time_utils.sec_to_date(os.path.getmtime(self.ossm.filename))
+                    if self.ossm.filename else datetime.datetime.now()))
         self.source_id = kwargs.pop('source_id', 'undefined')
         self.longitude = kwargs.pop('longitude', self.longitude)
         self.latitude = kwargs.pop('latitude', self.latitude)
@@ -320,7 +325,7 @@ class Wind(Environment, serializable.Serializable):
                 return np.allclose(self.timeseries['value'],
                                    other.timeseries['value'], 1e-10, 0)
 
-        # user_units is also not part of state.create list so do explicit
+        # user_units is also not part of _state.create list so do explicit
         # check here
         # if self.user_units != other.user_units:
         #    return False
@@ -503,16 +508,16 @@ class Tide(Environment, serializable.Serializable):
     a cython wrapper around the C++ Shio object
     """
 
-    state = copy.deepcopy(serializable.Serializable.state)
+    _state = copy.deepcopy(Environment._state)
 
-    # no need to copy parent's state in this case
+    # no need to copy parent's _state in this case
 
-    state.add(create=['yeardata'], update=['yeardata'])
+    _state.add(create=['yeardata'], update=['yeardata'])
 
     # add 'filename' as a Field object
 
-    state.add_field(serializable.Field('filename', isdatafile=True,
-                    create=True, read=True))
+    _state.add_field(serializable.Field('filename', isdatafile=True,
+                    create=True, read=True, test_for_eq=False))
 
     def __init__(
         self,

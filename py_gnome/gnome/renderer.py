@@ -11,7 +11,7 @@ import glob
 import copy
 
 import gnome    # implicitly used when loading from dict by new_from_dict
-from gnome.outputter import Outputter
+from gnome.outputters import Outputter
 from gnome.utilities.map_canvas import MapCanvas
 from gnome.utilities import serializable
 from gnome.utilities.file_tools import haz_files
@@ -36,10 +36,10 @@ class Renderer(Outputter, MapCanvas, serializable.Serializable):
     _create = ['image_size', 'projection_class', 'draw_ontop']
 
     _create.extend(_update)
-    state = copy.deepcopy(serializable.Serializable.state)
-    state.add(create=_create, update=_update)
-    state.add_field(serializable.Field('filename', isdatafile=True,
-                    create=True, read=True))
+    _state = copy.deepcopy(serializable.Serializable._state)
+    _state.add(create=_create, update=_update)
+    _state.add_field(serializable.Field('filename', isdatafile=True,
+                    create=True, read=True, test_for_eq=False))
 
     @classmethod
     def new_from_dict(cls, dict_):
@@ -60,8 +60,8 @@ class Renderer(Outputter, MapCanvas, serializable.Serializable):
 
     def __init__(
         self,
-        filename,
-        images_dir,
+        filename=None,
+        images_dir='./',
         image_size=(800, 600),
         cache=None,
         output_timestep=None,
@@ -119,7 +119,10 @@ class Renderer(Outputter, MapCanvas, serializable.Serializable):
         # set up the canvas
 
         self._filename = filename
-        polygons = haz_files.ReadBNA(filename, 'PolygonSet')
+        if filename is not None:
+            polygons = haz_files.ReadBNA(filename, 'PolygonSet')
+        else:
+            polygons = None
         Outputter.__init__(self, cache, output_timestep, output_zero_step,
                            output_last_step)
         MapCanvas.__init__(self, image_size, land_polygons=polygons,

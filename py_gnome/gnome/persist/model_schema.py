@@ -23,25 +23,18 @@ class ObjectInModel(TupleSchema):
     id = SchemaNode(String())
 
 
-# class MapList(MappingSchema):
-#    map = MapItem()
-    # output_map = MapItem(missing=drop)
-
 class Model(base_schema.Id, MappingSchema):
 
     time_step = SchemaNode(Float())
+    weathering_substeps = SchemaNode(Int())
     start_time = SchemaNode(extend_colander.LocalDateTime(),
                             validator=validators.convertible_to_seconds)
     duration = SchemaNode(extend_colander.TimeDelta())  # put a constraint for max duration?
     movers = base_schema.OrderedCollection()
+    weatherers = base_schema.OrderedCollection()
     environment = base_schema.OrderedCollection()
     uncertain = SchemaNode(Bool())
     spills = SpillContainerPair()
-
-    # map = MapList()
-
-    map = ObjectInModel()
+    map = SchemaNode(String())
     outputters = base_schema.OrderedCollection()
     cache_enabled = SchemaNode(Bool())
-
-

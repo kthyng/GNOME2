@@ -205,7 +205,7 @@ class Test_GnomeMap:
 
         gmap = gnome.map.GnomeMap()
         dict_ = gmap.to_dict('create')
-        dict_.pop('obj_type')
+        #dict_.pop('obj_type')
         gmap2 = gmap.new_from_dict(dict_)
 
         assert gmap == gmap2
@@ -233,6 +233,20 @@ class Test_RasterMap:
     # set some land in middle:
 
     raster[6:13, 4:8] = 1
+
+    def test_save_as_image(self):
+        """
+        only tests that it doesn't crash -- you need to look at the
+        image to see if it's right
+        """
+        rmap = RasterMap(refloat_halflife=6,
+                         bitmap_array=self.raster,
+                         map_bounds=((-50, -30), (-50, 30), (50, 30),(50, -30)),
+                         projection=NoProjection())  
+
+        rmap.save_as_image('raster_map_image.png')
+
+        assert True
 
     def test_on_map(self):
         gmap = RasterMap(refloat_halflife=6, bitmap_array=self.raster,
@@ -317,8 +331,8 @@ class TestRefloat:
 
     map = RasterMap(refloat_halflife=time_step / 3600.,
                     bitmap_array=np.zeros((20, 12), dtype=np.uint8),
-                    projection=NoProjection(), map_bounds=((-50, -30),
-                    (-50, 30), (50, 30), (50, -30)))  # hours
+                    projection=NoProjection(),
+                    map_bounds=((-50, -30),(-50, 30), (50, 30), (50, -30)))  # hours
 
     num_les = 1000
     spill = sample_sc_release(num_les)
@@ -338,7 +352,7 @@ class TestRefloat:
         all elements in water so do nothing
         """
 
-        self.reset()  # reset state
+        self.reset()  # reset _state
         (self.spill['status_codes'])[:] = oil_status.in_water
         self.map.refloat_elements(self.spill, self.time_step)
         assert np.all(self.spill['positions'] == self.orig_pos)
@@ -356,6 +370,23 @@ class TestRefloat:
         assert np.all((self.spill['positions'])[:5]
                       == self.orig_pos[:5])
         assert np.all((self.spill['positions'])[5:] == self.last_water)
+
+    def test_refloat_halflife_negative(self):
+        """
+        refloat_halflife is test_refloat_halflife_negative:
+
+        this should mean totally sticky --no refloat
+
+        """
+
+        self.reset()
+        self.map.refloat_halflife = -1
+        (self.spill['status_codes'])[5:] = oil_status.on_land
+        orig_status_codes = self.spill['status_codes'].copy()
+        self.map.refloat_elements(self.spill, self.time_step)
+        assert np.all((self.spill['positions']) == self.orig_pos)
+        assert np.all( self.spill['status_codes'] == orig_status_codes)
+
 
     def test_refloat_some_onland(self):
         """
@@ -527,7 +558,6 @@ def test_MapfromBNA_new_from_dict():
 
     gmap = gnome.map.MapFromBNA(testmap, 6)
     dict_ = gmap.to_dict('create')
-    dict_.pop('obj_type')
     map2 = gmap.new_from_dict(dict_)
     assert gmap == map2
 

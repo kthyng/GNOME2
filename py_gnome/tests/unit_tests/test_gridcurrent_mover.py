@@ -30,6 +30,10 @@ def test_exceptions():
     with pytest.raises(ValueError):
         GridCurrentMover(bad_file)
 
+    bad_file = get_datafile(os.path.join(cur_dir, 'BigCombinedwMapBad.cur'))
+    with pytest.raises(OSError):
+        GridCurrentMover(bad_file)
+
     with pytest.raises(TypeError):
         GridCurrentMover(curr_file, topology_file=10)
 

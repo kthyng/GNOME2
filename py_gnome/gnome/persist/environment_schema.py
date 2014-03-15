@@ -3,16 +3,9 @@ Created on Feb 26, 2013
 '''
 import datetime
 
-from colander import (
-    MappingSchema,
-    SchemaNode,
-    Bool,
-    String,
-    OneOf,
-    Float,
-    Range,
-    drop
-)
+from colander import (MappingSchema, SchemaNode,
+                      Bool, String, Float, Range,
+                      OneOf, drop)
 
 import gnome
 from gnome.persist import validators
@@ -63,7 +56,7 @@ class Wind(Id, MappingSchema):
 
     """
     validate data after deserialize, before it is given back to pyGnome's
-    from_dict to set state of object
+    from_dict to set _state of object
     """
 
     description = SchemaNode(String(), missing=drop)
@@ -79,8 +72,10 @@ class Wind(Id, MappingSchema):
 
     timeseries = WindTimeSeriesSchema(missing=drop)
     filename = SchemaNode(String(), missing=drop)
+    name = 'wind'
 
 
 class Tide(Id, MappingSchema):
-    filename = SchemaNode( String(), missing=drop)
-    yeardata = SchemaNode( String() )
+    filename = SchemaNode(String(), missing=drop)
+    yeardata = SchemaNode(String())
+    name = 'tide'

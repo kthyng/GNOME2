@@ -27,6 +27,10 @@ class TracpyMover(Mover):
     tracpy_mover
     """
 
+    _state = copy.deepcopy(Mover._state)
+    _state.add(update=['uncertainty_scale', 'velocity'],
+              create=['uncertainty_scale', 'velocity'])
+
     def __init__(
         self,
         currents_filename,
